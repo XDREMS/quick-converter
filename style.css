@@ -256,3 +256,101 @@ footer a:hover { text-decoration: underline; }
   color: var(--text-muted);
   font-size: 1rem;
 }
+
+/* ===== Result Files List (Converted Images) ===== */
+.result-files {
+  margin-top: 30px;
+  padding-top: 25px;
+  border-top: 1px solid var(--border);
+}
+
+.result-files h3 {
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.result-files .success-badge {
+  color: var(--success);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.result-item-info {
+  flex: 1;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.result-item-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-item-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.result-item-meta .format-tag {
+  display: inline-block;
+  background: rgba(46,160,67,0.15);
+  color: var(--success);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.download-single {
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.download-single:hover { background: #268a38; }
+
+.download-all-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 15px;
+  transition: background 0.2s;
+}
+.download-all-btn:hover { background: var(--accent-hover); }
