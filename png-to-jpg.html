@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free PNG to JPG Converter Online</title>
+  <meta name="description" content="Convert PNG to JPG online for free. No upload, no signup. Works in your browser.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1><a href="index.html" style="color:inherit;text-decoration:none;">⚡ Quick Converter</a></h1>
+    <p>Free tools that work in your browser.</p>
+  </header>
+
+  <div class="tool-container">
+    <h1>🔄 PNG to JPG Converter</h1>
+    <p>Convert PNG images to JPG format instantly. Files never leave your device.</p>
+
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" accept="image/png">
+      <p><strong>Click to select PNG image</strong></p>
+      <p style="color:#6B7280;font-size:0.85rem;margin-top:5px;">or drag and drop</p>
+    </div>
+
+    <button class="btn" id="convertBtn" disabled>Convert to JPG</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <footer>
+    <p>© 2026 Quick Converter. All rights reserved.</p>
+    <p><a href="index.html">Home</a> | <a href="about.html">About</a> | <a href="privacy.html">Privacy</a></p>
+  </footer>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const convertBtn = document.getElementById('convertBtn');
+    const result = document.getElementById('result');
+    let selectedFile = null;
+
+    fileInput.addEventListener('change', (e) => {
+      selectedFile = e.target.files[0];
+      if (selectedFile) {
+        if(selectedFile.type !== 'image/png') {
+            alert('Please select a PNG file.');
+            selectedFile = null;
+            convertBtn.disabled = true;
+            return;
+        }
+        convertBtn.disabled = false;
+        result.style.display = 'block';
+        result.innerHTML = `<p>Selected: <strong>${selectedFile.name}</strong> (${(selectedFile.size/1024).toFixed(1)} KB)</p>`;
+      }
+    });
+
+    convertBtn.addEventListener('click', () => {
+      if (!selectedFile) return;
+      convertBtn.disabled = true;
+      convertBtn.textContent = 'Converting...';
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          
+          // Fill white background for transparent PNGs
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+
+          canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const newSize = (blob.size / 1024).toFixed(1);
+            
+            result.innerHTML = `
+              <p>✅ <strong>Converted to JPG!</strong></p>
+              <p>New Size: ${newSize} KB</p>
+              <img src="${url}" alt="Preview">
+              <br>
+              <a href="${url}" download="converted_${selectedFile.name.replace('.png', '.jpg')}" class="btn" style="margin-top:15px;">Download JPG</a>
+            `;
+            convertBtn.disabled = false;
+            convertBtn.textContent = 'Convert to JPG';
+          }, 'image/jpeg', 0.9);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(selectedFile);
+    });
+  </script>
+</body>
+</html>
