@@ -66,6 +66,7 @@
     let selectedFiles = [];
 
     // सारे फॉर्मेट की लिस्ट (जो सपोर्टेड हैं + जो नहीं हैं)
+        // सिर्फ काम करने वाले 7 फॉर्मेट
     const FORMATS = [
       { value: 'image/jpeg', label: 'JPG', supported: true },
       { value: 'image/png', label: 'PNG', supported: true },
@@ -73,15 +74,7 @@
       { value: 'image/bmp', label: 'BMP', supported: true },
       { value: 'image/x-icon', label: 'ICO', supported: true },
       { value: 'image/avif', label: 'AVIF', supported: true },
-      { value: 'application/pdf', label: 'PDF', supported: true },
-      { value: 'image/svg+xml', label: 'SVG', supported: false },
-      { value: 'image/gif', label: 'GIF', supported: false },
-      { value: 'image/tiff', label: 'TIFF', supported: false },
-      { value: 'image/vnd.adobe.photoshop', label: 'PSD', supported: false },
-      { value: 'application/postscript', label: 'EPS', supported: false },
-      { value: 'application/postscript-ps', label: 'PS', supported: false },
-      { value: 'image/icns', label: 'ICNS', supported: false },
-      { value: 'application/vnd.oasis.opendocument', label: 'ODD', supported: false }
+      { value: 'application/pdf', label: 'PDF', supported: true }
     ];
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
