@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Free PNG to JPG Converter Online</title>
-  <meta name="description" content="Convert PNG to JPG online for free. No upload, no signup. Works in your browser.">
+  <title>Free Image Converter - Convert JPG, PNG, WebP Online</title>
+  <meta name="description" content="Convert images online for free. Auto-detect format, convert to JPG, PNG, WebP. No upload, works in your browser.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,16 +14,31 @@
   </header>
 
   <div class="tool-container">
-    <h1>🔄 PNG to JPG Converter</h1>
-    <p>Convert PNG images to JPG format instantly. Files never leave your device.</p>
+    <h1>🔄 Universal Image Converter</h1>
+    <p>Auto-detect format and convert to JPG, PNG, or WebP instantly. Files never leave your device.</p>
 
     <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-      <input type="file" id="fileInput" accept="image/png">
-      <p><strong>Click to select PNG image</strong></p>
+      <input type="file" id="fileInput" accept="image/*">
+      <p><strong>Click to select image</strong></p>
       <p style="color:#6B7280;font-size:0.85rem;margin-top:5px;">or drag and drop</p>
     </div>
 
-    <button class="btn" id="convertBtn" disabled>Convert to JPG</button>
+    <!-- Auto Detected Format Display -->
+    <div style="background: #F3F4F6; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none;" id="detectBox">
+      <p style="margin: 0; font-size: 0.95rem;">Detected Format: <strong id="detectedFormat" style="color: var(--primary);"></strong></p>
+    </div>
+
+    <!-- Target Format Dropdown -->
+    <div style="margin-bottom: 20px;">
+      <label for="formatSelect" style="font-weight: 600; display: block; margin-bottom: 8px;">Convert to:</label>
+      <select id="formatSelect" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background: white; cursor: pointer;">
+        <option value="image/jpeg">JPG (JPEG)</option>
+        <option value="image/png">PNG</option>
+        <option value="image/webp">WebP</option>
+      </select>
+    </div>
+
+    <button class="btn" id="convertBtn" disabled>Convert Image</button>
 
     <div class="result" id="result"></div>
   </div>
@@ -36,26 +51,39 @@
   <script>
     const fileInput = document.getElementById('fileInput');
     const convertBtn = document.getElementById('convertBtn');
+    const formatSelect = document.getElementById('formatSelect');
+    const detectBox = document.getElementById('detectBox');
+    const detectedFormat = document.getElementById('detectedFormat');
     const result = document.getElementById('result');
     let selectedFile = null;
 
+    // Jab user file upload kare
     fileInput.addEventListener('change', (e) => {
       selectedFile = e.target.files[0];
       if (selectedFile) {
-        if(selectedFile.type !== 'image/png') {
-            alert('Please select a PNG file.');
-            selectedFile = null;
-            convertBtn.disabled = true;
-            return;
+        // Format auto-detect karo
+        const type = selectedFile.type.split('/')[1].toUpperCase();
+        detectedFormat.textContent = type;
+        detectBox.style.display = 'block';
+        
+        // Default dropdown ko current format par set karo (agar available ho)
+        const currentMime = selectedFile.type;
+        if (['image/jpeg', 'image/png', 'image/webp'].includes(currentMime)) {
+          formatSelect.value = currentMime;
         }
+
         convertBtn.disabled = false;
-        result.style.display = 'block';
-        result.innerHTML = `<p>Selected: <strong>${selectedFile.name}</strong> (${(selectedFile.size/1024).toFixed(1)} KB)</p>`;
+        result.style.display = 'none';
       }
     });
 
+    // Jab user Convert button dabaye
     convertBtn.addEventListener('click', () => {
       if (!selectedFile) return;
+      
+      const targetFormat = formatSelect.value; // e.g., 'image/jpeg'
+      const extension = targetFormat === 'image/jpeg' ? 'jpg' : targetFormat.split('/')[1];
+      
       convertBtn.disabled = true;
       convertBtn.textContent = 'Converting...';
 
@@ -67,26 +95,36 @@
           canvas.width = img.width;
           canvas.height = img.height;
           const ctx = canvas.getContext('2d');
+
+          // Agar JPG mein convert kar rahe hain, toh transparent background ko white karo
+          if (targetFormat === 'image/jpeg') {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
           
-          // Fill white background for transparent PNGs
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0);
 
           canvas.toBlob((blob) => {
             const url = URL.createObjectURL(blob);
             const newSize = (blob.size / 1024).toFixed(1);
             
+            // File ka naya naam banao
+            const originalName = selectedFile.name;
+            const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+            const newFileName = `${nameWithoutExt}.${extension}`;
+
+            result.style.display = 'block';
             result.innerHTML = `
-              <p>✅ <strong>Converted to JPG!</strong></p>
+              <p>✅ <strong>Converted to ${extension.toUpperCase()}!</strong></p>
               <p>New Size: ${newSize} KB</p>
               <img src="${url}" alt="Preview">
               <br>
-              <a href="${url}" download="converted_${selectedFile.name.replace('.png', '.jpg')}" class="btn" style="margin-top:15px;">Download JPG</a>
+              <a href="${url}" download="${newFileName}" class="btn" style="margin-top:15px;">Download ${extension.toUpperCase()}</a>
             `;
+            
             convertBtn.disabled = false;
-            convertBtn.textContent = 'Convert to JPG';
-          }, 'image/jpeg', 0.9);
+            convertBtn.textContent = 'Convert Image';
+          }, targetFormat, 0.9); // 0.9 quality for JPG/WebP
         };
         img.src = e.target.result;
       };
