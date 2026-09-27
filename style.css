@@ -211,3 +211,15 @@ select {
   background-position: right 1rem center;
   background-size: 1em;
 }
+
+/* Bulk File List */
+#fileList li:last-child {
+  border-bottom: none !important;
+}
+#fileList::-webkit-scrollbar {
+  width: 6px;
+}
+#fileList::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 10px;
+}
