@@ -3,112 +3,148 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Free Image Compressor - Compress JPG, PNG Online</title>
-  <meta name="description" content="Compress images online for free. No upload, no signup. Works in your browser.">
+  <title>Universal Image Converter - JPG, PNG, WebP, HEIC</title>
+  <meta name="description" content="Convert any image (JPG, PNG, WebP, HEIC, SVG) to JPG, PNG, or WebP. Free and browser-based.">
   <link rel="stylesheet" href="style.css">
+  <!-- HEIC format padhne ke liye library -->
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 </head>
 <body>
   <header>
-    <h1><a href="index.html" style="color:white;text-decoration:none;">⚡ Quick Converter</a></h1>
+    <h1><a href="index.html" style="color:inherit;text-decoration:none;">⚡ Quick Converter</a></h1>
+    <p>Free tools that work in your browser.</p>
   </header>
 
   <div class="tool-container">
-    <h1>🗜️ Image Compressor</h1>
-    <p>Compress JPG, PNG, WebP images. Files never leave your device.</p>
+    <h1>🖼️ Universal Image Converter</h1>
+    <p>Upload any image (JPG, PNG, WebP, HEIC, SVG, GIF) and convert it. Files never leave your device.</p>
 
     <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-      <input type="file" id="fileInput" accept="image/*">
-      <p><strong>Click to select image</strong></p>
-      <p style="color:#999;font-size:0.9rem;">or drag and drop</p>
+      <input type="file" id="fileInput" accept="image/*,.heic,.heif">
+      <p><strong>Click to select any image</strong></p>
+      <p style="color:#6B7280;font-size:0.85rem;margin-top:5px;">JPG, PNG, WebP, HEIC, SVG supported</p>
     </div>
 
-    <div style="margin-bottom:20px;">
-      <label>Quality: <span id="qualityValue">70</span>%</label>
-      <input type="range" id="quality" min="10" max="100" value="70" style="width:100%;">
+    <div style="background: #F3F4F6; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none;" id="detectBox">
+      <p style="margin: 0; font-size: 0.95rem;">Detected Input Format: <strong id="detectedFormat" style="color: var(--primary);"></strong></p>
     </div>
 
-    <button class="btn" id="compressBtn" disabled>Compress Image</button>
+    <div style="margin-bottom: 20px;">
+      <label for="formatSelect" style="font-weight: 600; display: block; margin-bottom: 8px;">Convert To:</label>
+      <select id="formatSelect" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background: white; cursor: pointer;">
+        <option value="image/jpeg">JPG (JPEG)</option>
+        <option value="image/png">PNG</option>
+        <option value="image/webp">WebP</option>
+      </select>
+    </div>
 
+    <button class="btn" id="convertBtn" disabled>Convert Image</button>
     <div class="result" id="result"></div>
   </div>
 
   <footer>
-    <p>© 2026 Quick Converter</p>
+    <p>© 2026 Quick Converter. All rights reserved.</p>
+    <p><a href="index.html">Home</a> | <a href="about.html">About</a> | <a href="privacy.html">Privacy</a></p>
   </footer>
 
   <script>
     const fileInput = document.getElementById('fileInput');
-    const compressBtn = document.getElementById('compressBtn');
-    const qualitySlider = document.getElementById('quality');
-    const qualityValue = document.getElementById('qualityValue');
+    const convertBtn = document.getElementById('convertBtn');
+    const formatSelect = document.getElementById('formatSelect');
+    const detectBox = document.getElementById('detectBox');
+    const detectedFormat = document.getElementById('detectedFormat');
     const result = document.getElementById('result');
     let selectedFile = null;
-
-    qualitySlider.addEventListener('input', (e) => {
-      qualityValue.textContent = e.target.value;
-    });
 
     fileInput.addEventListener('change', (e) => {
       selectedFile = e.target.files[0];
       if (selectedFile) {
-        compressBtn.disabled = false;
-        result.innerHTML = `<p>Selected: <strong>${selectedFile.name}</strong> (${(selectedFile.size/1024).toFixed(1)} KB)</p>`;
+        // Format Auto-Detect karo
+        let type = selectedFile.type;
+        let ext = selectedFile.name.split('.').pop().toLowerCase();
+        
+        if (!type || type === 'application/octet-stream') {
+            type = `image/${ext}`;
+        }
+
+        const formatName = ext.toUpperCase();
+        detectedFormat.textContent = `${formatName} (${type})`;
+        detectBox.style.display = 'block';
+        convertBtn.disabled = false;
+        result.style.display = 'none';
       }
     });
 
-    compressBtn.addEventListener('click', async () => {
+    convertBtn.addEventListener('click', async () => {
       if (!selectedFile) return;
-      compressBtn.disabled = true;
-      compressBtn.textContent = 'Compressing...';
+      
+      const targetFormat = formatSelect.value; 
+      let extension = targetFormat === 'image/jpeg' ? 'jpg' : targetFormat.split('/')[1];
+      
+      convertBtn.disabled = true;
+      convertBtn.textContent = 'Converting...';
 
       try {
-        const quality = parseInt(qualitySlider.value) / 100;
-        const compressedBlob = await compressImage(selectedFile, quality);
-        const originalSize = (selectedFile.size / 1024).toFixed(1);
-        const newSize = (compressedBlob.size / 1024).toFixed(1);
-        const saving = ((1 - compressedBlob.size / selectedFile.size) * 100).toFixed(1);
+        let imageSource = selectedFile;
 
-        const url = URL.createObjectURL(compressedBlob);
-        result.innerHTML = `
-          <p>✅ <strong>Compressed!</strong></p>
-          <p>Original: ${originalSize} KB → New: ${newSize} KB</p>
-          <p>Saved: <strong>${saving}%</strong></p>
-          <img src="${url}" alt="Preview">
-          <br>
-          <a href="${url}" download="compressed_${selectedFile.name}" class="btn">Download</a>
-        `;
-      } catch (err) {
-        result.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
-      }
+        // Agar HEIC/HEIF file hai, toh pehle usko PNG mein decode karo
+        if (selectedFile.name.toLowerCase().endsWith('.heic') || selectedFile.name.toLowerCase().endsWith('.heif') || selectedFile.type === 'image/heic') {
+            result.innerHTML = `<p>Processing HEIC image, please wait...</p>`;
+            const convertedBlob = await heic2any({ blob: selectedFile, toType: 'image/png' });
+            imageSource = convertedBlob;
+        }
 
-      compressBtn.disabled = false;
-      compressBtn.textContent = 'Compress Image';
-    });
-
-    function compressImage(file, quality) {
-      return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
+            canvas.width = img.width || img.naturalWidth;
+            canvas.height = img.height || img.naturalHeight;
             const ctx = canvas.getContext('2d');
+
+            // JPG ke liye transparent background white karo
+            if (targetFormat === 'image/jpeg') {
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
             ctx.drawImage(img, 0, 0);
-            canvas.toBlob(
-              (blob) => blob ? resolve(blob) : reject(new Error('Compression failed')),
-              'image/jpeg',
-              quality
-            );
+
+            canvas.toBlob((blob) => {
+              const url = URL.createObjectURL(blob);
+              const newSize = (blob.size / 1024).toFixed(1);
+              
+              const nameWithoutExt = selectedFile.name.substring(0, selectedFile.name.lastIndexOf('.')) || selectedFile.name;
+              const newFileName = `${nameWithoutExt}.${extension}`;
+
+              result.style.display = 'block';
+              result.innerHTML = `
+                <p>✅ <strong>Converted to ${extension.toUpperCase()}!</strong></p>
+                <p>New Size: ${newSize} KB</p>
+                <img src="${url}" alt="Preview">
+                <br>
+                <a href="${url}" download="${newFileName}" class="btn" style="margin-top:15px;">Download ${extension.toUpperCase()}</a>
+              `;
+              convertBtn.disabled = false;
+              convertBtn.textContent = 'Convert Image';
+            }, targetFormat, 0.9);
           };
-          img.onerror = () => reject(new Error('Invalid image'));
+          img.onerror = () => {
+             result.innerHTML = `<p style="color:red;">Error: Yeh image format browser read nahi kar pa raha.</p>`;
+             convertBtn.disabled = false;
+             convertBtn.textContent = 'Convert Image';
+          };
           img.src = e.target.result;
         };
-        reader.onerror = () => reject(new Error('File read failed'));
-        reader.readAsDataURL(file);
-      });
-    }
+        reader.readAsDataURL(imageSource);
+
+      } catch (error) {
+        result.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+        convertBtn.disabled = false;
+        convertBtn.textContent = 'Convert Image';
+      }
+    });
   </script>
 </body>
 </html>
