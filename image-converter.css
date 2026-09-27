@@ -1,0 +1,188 @@
+/* ============================================
+   Image Converter Tool - Specific Styles
+   ============================================ */
+
+/* ===== Tool Container ===== */
+.tool-container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: var(--card-bg);
+  padding: 40px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.tool-container h1 { font-size: 1.8rem; margin-bottom: 8px; }
+.tool-container > p { color: var(--text-muted); margin-bottom: 30px; }
+
+/* ===== Upload Zone ===== */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 60px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 24px;
+  background: rgba(255,255,255,0.02);
+}
+.upload-zone:hover { border-color: var(--accent); background: rgba(229,72,77,0.05); }
+.upload-zone.dragover { border-color: var(--accent); background: rgba(229,72,77,0.1); transform: scale(1.01); }
+.upload-zone input { display: none; }
+.upload-zone .icon { font-size: 3rem; margin-bottom: 15px; }
+.upload-zone .title { font-size: 1.2rem; font-weight: 600; margin-bottom: 8px; }
+.upload-zone .subtitle { font-size: 0.9rem; color: var(--text-muted); }
+.upload-zone .formats { font-size: 0.8rem; color: var(--text-muted); margin-top: 10px; }
+
+/* ===== Compact Upload Zone (जब फाइलें add हो जाएँ) ===== */
+.upload-zone.compact {
+  padding: 20px;
+  margin-bottom: 15px;
+  border-style: solid;
+  border-color: var(--border);
+}
+.upload-zone.compact .icon { font-size: 1.5rem; margin-bottom: 5px; }
+.upload-zone.compact .title { font-size: 1rem; }
+.upload-zone.compact .subtitle, .upload-zone.compact .formats { display: none; }
+
+/* ===== File List ===== */
+.file-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.file-list-header h3 { font-size: 1rem; font-weight: 600; }
+.file-list-header .actions { display: flex; align-items: center; gap: 10px; }
+.file-list-header .add-more {
+  background: var(--accent); color: white;
+  border: none; padding: 6px 12px;
+  border-radius: 6px; font-size: 0.8rem;
+  cursor: pointer; font-weight: 600;
+}
+.file-list-header .add-more:hover { background: var(--accent-hover); }
+.file-list-header .clear-all {
+  background: none; border: none; color: var(--accent);
+  font-size: 0.85rem; cursor: pointer; text-decoration: underline;
+}
+
+.file-list {
+  list-style: none; padding: 0;
+  max-height: 250px; overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+}
+.file-list li {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+}
+.file-list li:last-child { border-bottom: none; }
+
+.file-info-col {
+  display: flex; flex-direction: column;
+  flex: 1; overflow: hidden;
+}
+.file-info-col .file-name {
+  white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; font-weight: 500; font-size: 0.9rem;
+}
+.file-meta-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.78rem; color: var(--text-muted);
+}
+
+.file-actions { display: flex; align-items: center; gap: 10px; }
+
+.file-format-select {
+  background: var(--bg); color: var(--text-main);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 10px; font-size: 0.8rem;
+  cursor: pointer; outline: none;
+}
+.file-format-select:hover { border-color: var(--accent); }
+.file-format-select option { background: var(--card-bg); color: var(--text-main); }
+
+.arrow-icon { color: var(--text-muted); font-size: 1rem; }
+
+.file-remove {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 1.2rem; cursor: pointer; padding: 0 5px;
+}
+.file-remove:hover { color: var(--accent); }
+
+/* ===== Result Message ===== */
+.result {
+  margin-top: 24px; padding: 20px;
+  border-radius: var(--radius);
+  background: rgba(46,160,67,0.1);
+  border: 1px solid var(--success);
+  text-align: center;
+  display: none;
+}
+.result.error { background: rgba(229,72,77,0.1); border-color: var(--accent); }
+
+/* ===== Result Files List ===== */
+.result-files {
+  margin-top: 25px;
+  padding-top: 25px;
+  border-top: 1px solid var(--border);
+}
+.result-files h3 {
+  font-size: 1.1rem; margin-bottom: 15px;
+  display: flex; justify-content: space-between;
+  align-items: center; flex-wrap: wrap; gap: 10px;
+}
+.result-files .success-badge {
+  color: var(--success); font-size: 0.85rem; font-weight: 500;
+}
+
+.result-item {
+  display: flex; justify-content: space-between;
+  align-items: center; padding: 14px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border); border-radius: 8px;
+  margin-bottom: 10px; gap: 12px; flex-wrap: wrap;
+}
+.result-item-info { flex: 1; min-width: 180px; overflow: hidden; }
+.result-item-name {
+  font-weight: 500; font-size: 0.9rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.result-item-meta {
+  font-size: 0.78rem; color: var(--text-muted); margin-top: 3px;
+}
+.result-item-meta .format-tag {
+  display: inline-block;
+  background: rgba(46,160,67,0.15);
+  color: var(--success);
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 0.7rem; font-weight: 600; margin-right: 6px;
+}
+
+.download-single {
+  background: var(--success); color: white;
+  border: none; padding: 8px 16px; border-radius: 6px;
+  font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+  white-space: nowrap; transition: background 0.2s;
+}
+.download-single:hover { background: #268a38; color: white; }
+
+.download-all-btn {
+  background: var(--accent); color: white;
+  border: none; padding: 16px; border-radius: 10px;
+  font-size: 1rem; font-weight: 600;
+  cursor: pointer; width: 100%;
+  margin-top: 15px; transition: background 0.2s;
+}
+.download-all-btn:hover { background: var(--accent-hover); }
+.download-all-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ===== Scrollbar ===== */
+.file-list::-webkit-scrollbar { width: 6px; }
+.file-list::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 10px; }
