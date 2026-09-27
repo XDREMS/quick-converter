@@ -20,9 +20,9 @@
   <main>
     <div class="tool-container" id="toolContainer">
       <h1>🖼️ Universal Image Converter</h1>
-      <p>Drag & drop multiple images and convert them to JPG, PNG, WebP, or PDF instantly.</p>
+      <p>Drag & drop multiple images and choose the format for each one individually.</p>
 
-      <!-- Drag & Drop Zone (हमेशा दिखेगा) -->
+      <!-- Drag & Drop Zone -->
       <div class="upload-zone" id="uploadZone">
         <input type="file" id="fileInput" accept="image/*,.heic,.heif,.svg" multiple>
         <div class="icon" id="uploadIcon">📁</div>
@@ -43,22 +43,8 @@
         <ul class="file-list" id="fileList"></ul>
       </div>
 
-      <!-- Format Selector -->
-      <div class="format-selector" id="formatContainer" style="display: none;">
-        <label for="formatSelect">Convert To:</label>
-        <select id="formatSelect">
-          <optgroup label="Image Formats">
-            <option value="image/jpeg">JPG (JPEG)</option>
-            <option value="image/png">PNG</option>
-            <option value="image/webp">WebP</option>
-          </optgroup>
-          <optgroup label="Document Format">
-            <option value="application/pdf">PDF (All images in one file)</option>
-          </optgroup>
-        </select>
-      </div>
-
-      <button class="btn" id="convertBtn" disabled style="display: none;">Convert Images</button>
+      <!-- Convert Button -->
+      <button class="btn" id="convertBtn" disabled style="display: none; margin-top: 24px;">Convert Images</button>
       <div class="result" id="result"></div>
     </div>
   </main>
@@ -75,53 +61,48 @@
     const fileListContainer = document.getElementById('fileListContainer');
     const fileList = document.getElementById('fileList');
     const fileCount = document.getElementById('fileCount');
-    const formatContainer = document.getElementById('formatContainer');
-    const formatSelect = document.getElementById('formatSelect');
     const convertBtn = document.getElementById('convertBtn');
     const result = document.getElementById('result');
     const uploadIcon = document.getElementById('uploadIcon');
     const uploadTitle = document.getElementById('uploadTitle');
     
-    let selectedFiles = [];
+    // नया स्ट्रक्चर: हर फाइल का अपना टारगेट फॉर्मेट होगा
+    let selectedFiles = []; // { file: File, targetFormat: 'image/jpeg' }
 
-    // ===== Drag & Drop (पूरे टूल पर काम करेगा) =====
+    // ===== Drag & Drop =====
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      toolContainer.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }, false);
+      toolContainer.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
     });
-
-    toolContainer.addEventListener('dragover', () => {
-      uploadZone.classList.add('dragover');
-    });
-    toolContainer.addEventListener('dragleave', () => {
-      uploadZone.classList.remove('dragover');
-    });
+    toolContainer.addEventListener('dragover', () => uploadZone.classList.add('dragover'));
+    toolContainer.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
     toolContainer.addEventListener('drop', (e) => {
       uploadZone.classList.remove('dragover');
       handleFiles(e.dataTransfer.files);
     });
 
     uploadZone.addEventListener('click', () => fileInput.click());
-
-    // ===== File Input =====
     fileInput.addEventListener('change', (e) => {
       handleFiles(e.target.files);
-      fileInput.value = ''; // रीसेट करें ताकि एक ही फाइल दोबारा सेलेक्ट कर सकें
+      fileInput.value = '';
     });
 
-    // ===== Handle Files (Append Logic) =====
+    // ===== Handle Files =====
     function handleFiles(files) {
       const newFiles = Array.from(files).filter(f => 
         f.type.startsWith('image/') || f.name.match(/\.(heic|heif|svg|avif|bmp|gif)$/i)
-      );
-      
-      if (newFiles.length === 0) return;
+      ).map(file => ({
+        file: file,
+        targetFormat: 'image/jpeg' // डिफ़ॉल्ट फॉर्मेट
+      }));
 
-      // पुरानी लिस्ट में नई फाइलें जोड़ो (Auto-Add)
+      if (newFiles.length === 0) return;
       selectedFiles = selectedFiles.concat(newFiles);
       updateUI();
+    }
+
+    // ===== Format Change Handler =====
+    function changeFormat(index, format) {
+      selectedFiles[index].targetFormat = format;
     }
 
     // ===== Update UI =====
@@ -129,26 +110,39 @@
       fileList.innerHTML = '';
       fileCount.textContent = selectedFiles.length;
       
-      selectedFiles.forEach((file, index) => {
+      selectedFiles.forEach((item, index) => {
+        const file = item.file;
         const ext = file.name.split('.').pop().toUpperCase();
+        
+        // हर फाइल के लिए अलग ड्रॉपडाउन
         const li = document.createElement('li');
         li.innerHTML = `
-          <span class="file-name">${file.name}</span>
-          <span class="file-meta">${(file.size/1024).toFixed(1)} KB · ${ext}</span>
-          <button class="file-remove" onclick="removeFile(${index})">&times;</button>
+          <div class="file-info-col">
+            <span class="file-name">${file.name}</span>
+            <div class="file-meta-row">
+              <span>${(file.size/1024).toFixed(1)} KB</span> • <span>${ext}</span>
+            </div>
+          </div>
+          <div class="file-actions">
+            <span class="arrow-icon">→</span>
+            <select class="file-format-select" onchange="changeFormat(${index}, this.value)">
+              <option value="image/jpeg" ${item.targetFormat === 'image/jpeg' ? 'selected' : ''}>JPG</option>
+              <option value="image/png" ${item.targetFormat === 'image/png' ? 'selected' : ''}>PNG</option>
+              <option value="image/webp" ${item.targetFormat === 'image/webp' ? 'selected' : ''}>WEBP</option>
+              <option value="application/pdf" ${item.targetFormat === 'application/pdf' ? 'selected' : ''}>PDF</option>
+            </select>
+            <button class="file-remove" onclick="removeFile(${index})">&times;</button>
+          </div>
         `;
         fileList.appendChild(li);
       });
 
       const hasFiles = selectedFiles.length > 0;
-      
-      // अपलोड ज़ोन को छोटा करो, छिपाओ मत
       if (hasFiles) {
         uploadZone.classList.add('compact');
         uploadIcon.textContent = '➕';
         uploadTitle.textContent = 'Add more images';
         fileListContainer.style.display = 'block';
-        formatContainer.style.display = 'block';
         convertBtn.style.display = 'block';
         convertBtn.disabled = false;
       } else {
@@ -156,7 +150,6 @@
         uploadIcon.textContent = '📁';
         uploadTitle.textContent = 'Drop your images here';
         fileListContainer.style.display = 'none';
-        formatContainer.style.display = 'none';
         convertBtn.style.display = 'none';
       }
       result.style.display = 'none';
@@ -173,26 +166,27 @@
       updateUI();
     }
 
-    // ===== Convert =====
+    // ===== Convert Logic (Per-File Format) =====
     convertBtn.addEventListener('click', async () => {
       if (selectedFiles.length === 0) return;
-      const targetFormat = formatSelect.value;
-      let extension = targetFormat === 'image/jpeg' ? 'jpg' : targetFormat.split('/')[1];
 
       convertBtn.disabled = true;
       convertBtn.textContent = `Converting 0/${selectedFiles.length}...`;
       result.style.display = 'none';
 
       try {
-        const { jsPDF } = window.jspdf;
-        let pdfDoc = targetFormat === 'application/pdf' ? new jsPDF() : null;
-        let zip = targetFormat !== 'application/pdf' ? new JSZip() : null;
+        let zip = new JSZip(); // सब कुछ ZIP में डालेंगे
 
         for (let i = 0; i < selectedFiles.length; i++) {
-          let file = selectedFiles[i];
+          let item = selectedFiles[i];
+          let file = item.file;
+          let targetFormat = item.targetFormat; 
+          let extension = targetFormat === 'image/jpeg' ? 'jpg' : targetFormat.split('/')[1];
+
           convertBtn.textContent = `Converting ${i+1}/${selectedFiles.length}...`;
           let imageSource = file;
 
+          // HEIC हैंडलिंग
           if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic') {
             const convertedBlob = await heic2any({ blob: file, toType: 'image/png' });
             imageSource = convertedBlob;
@@ -207,20 +201,28 @@
                 canvas.width = img.width || img.naturalWidth;
                 canvas.height = img.height || img.naturalHeight;
                 const ctx = canvas.getContext('2d');
+                
                 if (targetFormat === 'image/jpeg') {
                   ctx.fillStyle = '#FFFFFF';
                   ctx.fillRect(0, 0, canvas.width, canvas.height);
                 }
                 ctx.drawImage(img, 0, 0);
 
+                // अगर PDF सेलेक्ट किया है
                 if (targetFormat === 'application/pdf') {
+                  const { jsPDF } = window.jspdf;
+                  const pdfDoc = new jsPDF();
                   const imgData = canvas.toDataURL('image/jpeg', 0.9);
                   const pdfWidth = pdfDoc.internal.pageSize.getWidth();
                   const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                  if (i > 0) pdfDoc.addPage();
                   pdfDoc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                  
+                  const pdfBlob = pdfDoc.output('blob');
+                  const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                  zip.file(`${nameWithoutExt}.pdf`, pdfBlob);
                   resolve();
                 } else {
+                  // इमेज कन्वर्जन
                   canvas.toBlob((blob) => {
                     const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
                     zip.file(`${nameWithoutExt}.${extension}`, blob);
@@ -236,13 +238,9 @@
           });
         }
 
-        convertBtn.textContent = 'Packaging...';
-        if (targetFormat === 'application/pdf') {
-          pdfDoc.save('converted_images.pdf');
-        } else {
-          const content = await zip.generateAsync({ type: 'blob' });
-          saveAs(content, `converted_images_${extension}.zip`);
-        }
+        convertBtn.textContent = 'Packaging ZIP...';
+        const content = await zip.generateAsync({ type: 'blob' });
+        saveAs(content, `converted_images.zip`);
 
         result.style.display = 'block';
         result.className = 'result';
