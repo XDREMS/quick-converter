@@ -18,15 +18,15 @@
   </header>
 
   <main>
-    <div class="tool-container">
+    <div class="tool-container" id="toolContainer">
       <h1>🖼️ Universal Image Converter</h1>
       <p>Drag & drop multiple images and convert them to JPG, PNG, WebP, or PDF instantly.</p>
 
-      <!-- Drag & Drop Zone -->
+      <!-- Drag & Drop Zone (हमेशा दिखेगा) -->
       <div class="upload-zone" id="uploadZone">
         <input type="file" id="fileInput" accept="image/*,.heic,.heif,.svg" multiple>
-        <div class="icon">📁</div>
-        <div class="title">Drop your images here</div>
+        <div class="icon" id="uploadIcon">📁</div>
+        <div class="title" id="uploadTitle">Drop your images here</div>
         <div class="subtitle">or click to browse</div>
         <div class="formats">JPG · PNG · WebP · HEIC · AVIF · BMP · GIF · SVG</div>
       </div>
@@ -35,7 +35,10 @@
       <div id="fileListContainer" style="display: none;">
         <div class="file-list-header">
           <h3>Selected Files (<span id="fileCount">0</span>)</h3>
-          <button class="clear-all" onclick="resetTool()">Clear All</button>
+          <div class="actions">
+            <button class="add-more" onclick="fileInput.click()">+ Add More</button>
+            <button class="clear-all" onclick="resetTool()">Clear All</button>
+          </div>
         </div>
         <ul class="file-list" id="fileList"></ul>
       </div>
@@ -66,6 +69,7 @@
   </footer>
 
   <script>
+    const toolContainer = document.getElementById('toolContainer');
     const uploadZone = document.getElementById('uploadZone');
     const fileInput = document.getElementById('fileInput');
     const fileListContainer = document.getElementById('fileListContainer');
@@ -75,41 +79,56 @@
     const formatSelect = document.getElementById('formatSelect');
     const convertBtn = document.getElementById('convertBtn');
     const result = document.getElementById('result');
+    const uploadIcon = document.getElementById('uploadIcon');
+    const uploadTitle = document.getElementById('uploadTitle');
+    
     let selectedFiles = [];
 
-    // ===== Drag & Drop =====
-    uploadZone.addEventListener('click', () => fileInput.click());
+    // ===== Drag & Drop (पूरे टूल पर काम करेगा) =====
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      toolContainer.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, false);
+    });
 
-    uploadZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
+    toolContainer.addEventListener('dragover', () => {
       uploadZone.classList.add('dragover');
     });
-
-    uploadZone.addEventListener('dragleave', () => {
+    toolContainer.addEventListener('dragleave', () => {
       uploadZone.classList.remove('dragover');
     });
-
-    uploadZone.addEventListener('drop', (e) => {
-      e.preventDefault();
+    toolContainer.addEventListener('drop', (e) => {
       uploadZone.classList.remove('dragover');
-      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/') || f.name.match(/\.(heic|heif|svg|avif|bmp|gif)$/i));
-      if (files.length > 0) {
-        selectedFiles = files;
-        updateUI();
-      }
+      handleFiles(e.dataTransfer.files);
     });
+
+    uploadZone.addEventListener('click', () => fileInput.click());
 
     // ===== File Input =====
     fileInput.addEventListener('change', (e) => {
-      selectedFiles = Array.from(e.target.files);
-      updateUI();
+      handleFiles(e.target.files);
+      fileInput.value = ''; // रीसेट करें ताकि एक ही फाइल दोबारा सेलेक्ट कर सकें
     });
+
+    // ===== Handle Files (Append Logic) =====
+    function handleFiles(files) {
+      const newFiles = Array.from(files).filter(f => 
+        f.type.startsWith('image/') || f.name.match(/\.(heic|heif|svg|avif|bmp|gif)$/i)
+      );
+      
+      if (newFiles.length === 0) return;
+
+      // पुरानी लिस्ट में नई फाइलें जोड़ो (Auto-Add)
+      selectedFiles = selectedFiles.concat(newFiles);
+      updateUI();
+    }
 
     // ===== Update UI =====
     function updateUI() {
-      // File List
       fileList.innerHTML = '';
       fileCount.textContent = selectedFiles.length;
+      
       selectedFiles.forEach((file, index) => {
         const ext = file.name.split('.').pop().toUpperCase();
         const li = document.createElement('li');
@@ -121,13 +140,25 @@
         fileList.appendChild(li);
       });
 
-      // Show/Hide Sections
       const hasFiles = selectedFiles.length > 0;
-      uploadZone.style.display = hasFiles ? 'none' : 'block';
-      fileListContainer.style.display = hasFiles ? 'block' : 'none';
-      formatContainer.style.display = hasFiles ? 'block' : 'none';
-      convertBtn.style.display = hasFiles ? 'block' : 'none';
-      convertBtn.disabled = !hasFiles;
+      
+      // अपलोड ज़ोन को छोटा करो, छिपाओ मत
+      if (hasFiles) {
+        uploadZone.classList.add('compact');
+        uploadIcon.textContent = '➕';
+        uploadTitle.textContent = 'Add more images';
+        fileListContainer.style.display = 'block';
+        formatContainer.style.display = 'block';
+        convertBtn.style.display = 'block';
+        convertBtn.disabled = false;
+      } else {
+        uploadZone.classList.remove('compact');
+        uploadIcon.textContent = '📁';
+        uploadTitle.textContent = 'Drop your images here';
+        fileListContainer.style.display = 'none';
+        formatContainer.style.display = 'none';
+        convertBtn.style.display = 'none';
+      }
       result.style.display = 'none';
     }
 
