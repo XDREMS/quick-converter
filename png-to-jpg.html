@@ -4,9 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Universal Image Converter - Bulk JPG, PNG, WebP, PDF</title>
-  <meta name="description" content="Convert multiple images to JPG, PNG, WebP, or PDF for free. No upload, works in your browser.">
+  <meta name="description" content="Convert multiple images to JPG, PNG, WebP, or PDF for free. Drag & drop, no upload, works in your browser.">
   <link rel="stylesheet" href="style.css">
-  <!-- लाइब्रेरीज़ -->
   <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -14,46 +13,52 @@
 </head>
 <body>
   <header>
-    <h1><a href="index.html" style="color:inherit;text-decoration:none;">⚡ Quick Converter</a></h1>
-    <p>Free tools that work in your browser.</p>
+    <h1><a href="index.html">⚡ Quick Converter</a></h1>
+    <p>Free tools that work in your browser. No upload. No signup.</p>
   </header>
 
-  <div class="tool-container">
-    <h1>🖼️ Universal Image Converter</h1>
-    <p>Upload multiple images and convert them to JPG, PNG, WebP, or PDF instantly.</p>
+  <main>
+    <div class="tool-container">
+      <h1>🖼️ Universal Image Converter</h1>
+      <p>Drag & drop multiple images and convert them to JPG, PNG, WebP, or PDF instantly.</p>
 
-    <!-- Upload Area -->
-    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-      <input type="file" id="fileInput" accept="image/*,.heic,.heif,.svg" multiple>
-      <p><strong>Click to select multiple images</strong></p>
-      <p style="color:#6B7280;font-size:0.85rem;margin-top:5px;">JPG, PNG, WebP, HEIC, AVIF, BMP, GIF, SVG supported</p>
+      <!-- Drag & Drop Zone -->
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*,.heic,.heif,.svg" multiple>
+        <div class="icon">📁</div>
+        <div class="title">Drop your images here</div>
+        <div class="subtitle">or click to browse</div>
+        <div class="formats">JPG · PNG · WebP · HEIC · AVIF · BMP · GIF · SVG</div>
+      </div>
+
+      <!-- File List -->
+      <div id="fileListContainer" style="display: none;">
+        <div class="file-list-header">
+          <h3>Selected Files (<span id="fileCount">0</span>)</h3>
+          <button class="clear-all" onclick="resetTool()">Clear All</button>
+        </div>
+        <ul class="file-list" id="fileList"></ul>
+      </div>
+
+      <!-- Format Selector -->
+      <div class="format-selector" id="formatContainer" style="display: none;">
+        <label for="formatSelect">Convert To:</label>
+        <select id="formatSelect">
+          <optgroup label="Image Formats">
+            <option value="image/jpeg">JPG (JPEG)</option>
+            <option value="image/png">PNG</option>
+            <option value="image/webp">WebP</option>
+          </optgroup>
+          <optgroup label="Document Format">
+            <option value="application/pdf">PDF (All images in one file)</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <button class="btn" id="convertBtn" disabled style="display: none;">Convert Images</button>
+      <div class="result" id="result"></div>
     </div>
-
-    <!-- File List -->
-    <div id="fileListContainer" style="display: none; margin-bottom: 20px;">
-      <h3 style="margin-bottom: 10px; font-size: 1rem;">Selected Files (<span id="fileCount">0</span>)</h3>
-      <ul id="fileList" style="list-style: none; padding: 0; max-height: 150px; overflow-y: auto; background: #F9FAFB; border-radius: 8px; border: 1px solid var(--border-color);"></ul>
-      <button class="clear-btn" onclick="resetTool()" style="color: #EF4444; font-size: 0.9rem; margin-top: 10px;">&times; Clear All</button>
-    </div>
-
-    <!-- Format Selector -->
-    <div style="margin-bottom: 20px; display: none;" id="formatContainer">
-      <label for="formatSelect" style="font-weight: 600; display: block; margin-bottom: 8px;">Convert To:</label>
-      <select id="formatSelect" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background: white; cursor: pointer;">
-        <optgroup label="Image Formats">
-          <option value="image/jpeg">JPG (JPEG)</option>
-          <option value="image/png">PNG</option>
-          <option value="image/webp">WebP</option>
-        </optgroup>
-        <optgroup label="Document Format">
-          <option value="application/pdf">PDF (All images in one file)</option>
-        </optgroup>
-      </select>
-    </div>
-
-    <button class="btn" id="convertBtn" disabled style="display: none;">Convert Images</button>
-    <div class="result" id="result"></div>
-  </div>
+  </main>
 
   <footer>
     <p>© 2026 Quick Converter. All rights reserved.</p>
@@ -61,8 +66,8 @@
   </footer>
 
   <script>
+    const uploadZone = document.getElementById('uploadZone');
     const fileInput = document.getElementById('fileInput');
-    const uploadArea = document.getElementById('uploadArea');
     const fileListContainer = document.getElementById('fileListContainer');
     const fileList = document.getElementById('fileList');
     const fileCount = document.getElementById('fileCount');
@@ -70,78 +75,98 @@
     const formatSelect = document.getElementById('formatSelect');
     const convertBtn = document.getElementById('convertBtn');
     const result = document.getElementById('result');
-    
     let selectedFiles = [];
 
-    // 1. File Select Handler (Multiple Files)
-    fileInput.addEventListener('change', (e) => {
-      selectedFiles = Array.from(e.target.files);
-      if (selectedFiles.length === 0) return;
+    // ===== Drag & Drop =====
+    uploadZone.addEventListener('click', () => fileInput.click());
 
-      updateFileListUI();
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
     });
 
-    // 2. Update UI
-    function updateFileListUI() {
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/') || f.name.match(/\.(heic|heif|svg|avif|bmp|gif)$/i));
+      if (files.length > 0) {
+        selectedFiles = files;
+        updateUI();
+      }
+    });
+
+    // ===== File Input =====
+    fileInput.addEventListener('change', (e) => {
+      selectedFiles = Array.from(e.target.files);
+      updateUI();
+    });
+
+    // ===== Update UI =====
+    function updateUI() {
+      // File List
       fileList.innerHTML = '';
       fileCount.textContent = selectedFiles.length;
-
-      selectedFiles.forEach(file => {
+      selectedFiles.forEach((file, index) => {
         const ext = file.name.split('.').pop().toUpperCase();
         const li = document.createElement('li');
-        li.style.cssText = 'padding: 10px 15px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; font-size: 0.9rem;';
-        li.innerHTML = `<span><strong>${file.name}</strong></span> <span style="color:#6B7280;">${(file.size/1024).toFixed(1)} KB • ${ext}</span>`;
+        li.innerHTML = `
+          <span class="file-name">${file.name}</span>
+          <span class="file-meta">${(file.size/1024).toFixed(1)} KB · ${ext}</span>
+          <button class="file-remove" onclick="removeFile(${index})">&times;</button>
+        `;
         fileList.appendChild(li);
       });
 
-      uploadArea.style.display = selectedFiles.length > 0 ? 'none' : 'block';
-      fileListContainer.style.display = selectedFiles.length > 0 ? 'block' : 'none';
-      formatContainer.style.display = selectedFiles.length > 0 ? 'block' : 'none';
-      convertBtn.style.display = selectedFiles.length > 0 ? 'block' : 'none';
-      convertBtn.disabled = false;
+      // Show/Hide Sections
+      const hasFiles = selectedFiles.length > 0;
+      uploadZone.style.display = hasFiles ? 'none' : 'block';
+      fileListContainer.style.display = hasFiles ? 'block' : 'none';
+      formatContainer.style.display = hasFiles ? 'block' : 'none';
+      convertBtn.style.display = hasFiles ? 'block' : 'none';
+      convertBtn.disabled = !hasFiles;
       result.style.display = 'none';
     }
 
-    // 3. Reset Tool
+    function removeFile(index) {
+      selectedFiles.splice(index, 1);
+      updateUI();
+    }
+
     function resetTool() {
       selectedFiles = [];
       fileInput.value = '';
-      fileList.innerHTML = '';
-      updateFileListUI();
+      updateUI();
     }
 
-    // 4. Convert Button Handler
+    // ===== Convert =====
     convertBtn.addEventListener('click', async () => {
       if (selectedFiles.length === 0) return;
-      
-      const targetFormat = formatSelect.value; 
+      const targetFormat = formatSelect.value;
       let extension = targetFormat === 'image/jpeg' ? 'jpg' : targetFormat.split('/')[1];
-      
+
       convertBtn.disabled = true;
       convertBtn.textContent = `Converting 0/${selectedFiles.length}...`;
       result.style.display = 'none';
 
       try {
-        // PDF के लिए jsPDF
         const { jsPDF } = window.jspdf;
         let pdfDoc = targetFormat === 'application/pdf' ? new jsPDF() : null;
-        
-        // ZIP के लिए JSZip
-        let zip = (targetFormat !== 'application/pdf') ? new JSZip() : null;
+        let zip = targetFormat !== 'application/pdf' ? new JSZip() : null;
 
         for (let i = 0; i < selectedFiles.length; i++) {
           let file = selectedFiles[i];
           convertBtn.textContent = `Converting ${i+1}/${selectedFiles.length}...`;
-
           let imageSource = file;
 
-          // HEIC Conversion
           if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic') {
-              const convertedBlob = await heic2any({ blob: file, toType: 'image/png' });
-              imageSource = convertedBlob;
+            const convertedBlob = await heic2any({ blob: file, toType: 'image/png' });
+            imageSource = convertedBlob;
           }
 
-          // Image Processing Promise
           await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -151,29 +176,23 @@
                 canvas.width = img.width || img.naturalWidth;
                 canvas.height = img.height || img.naturalHeight;
                 const ctx = canvas.getContext('2d');
-
                 if (targetFormat === 'image/jpeg') {
                   ctx.fillStyle = '#FFFFFF';
                   ctx.fillRect(0, 0, canvas.width, canvas.height);
                 }
-                
                 ctx.drawImage(img, 0, 0);
 
-                // PDF में जोड़ो
                 if (targetFormat === 'application/pdf') {
                   const imgData = canvas.toDataURL('image/jpeg', 0.9);
                   const pdfWidth = pdfDoc.internal.pageSize.getWidth();
                   const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                  
                   if (i > 0) pdfDoc.addPage();
                   pdfDoc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
                   resolve();
                 } else {
-                  // इमेज कन्वर्जन (ZIP के लिए)
                   canvas.toBlob((blob) => {
                     const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-                    const newFileName = `${nameWithoutExt}.${extension}`;
-                    zip.file(newFileName, blob);
+                    zip.file(`${nameWithoutExt}.${extension}`, blob);
                     resolve();
                   }, targetFormat, 0.9);
                 }
@@ -186,9 +205,7 @@
           });
         }
 
-        // Final Download
-        convertBtn.textContent = 'Packaging files...';
-        
+        convertBtn.textContent = 'Packaging...';
         if (targetFormat === 'application/pdf') {
           pdfDoc.save('converted_images.pdf');
         } else {
@@ -197,12 +214,14 @@
         }
 
         result.style.display = 'block';
+        result.className = 'result';
         result.innerHTML = `<p>✅ <strong>Successfully converted ${selectedFiles.length} images!</strong></p>`;
         convertBtn.disabled = false;
         convertBtn.textContent = 'Convert Images';
 
       } catch (error) {
         result.style.display = 'block';
+        result.className = 'result error';
         result.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
         convertBtn.disabled = false;
         convertBtn.textContent = 'Convert Images';
