@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free Video Converter - MP4, WEBM, MOV, MKV, AVI, GIF</title>
+  <meta name="description" content="Convert videos to MP4, WEBM, MOV, MKV, AVI, or GIF free. No upload, works in your browser.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="video-converter.css">
+</head>
+<body>
+  <header>
+    <h1><a href="index.html">⚡ Quick Converter</a></h1>
+    <p>Free tools that work in your browser. No upload. No signup.</p>
+  </header>
+
+  <main>
+    <div class="tool-container" id="toolContainer">
+      <h1>🎬 Video Converter</h1>
+      <p>Convert videos to MP4, WEBM, MOV, MKV, AVI, or GIF. Files never leave your device.</p>
+
+      <!-- Warning -->
+      <div class="warning-box">
+        ⚠️ <strong>Note:</strong> Video conversion is slow (real-time) and works best on <strong>desktop</strong> with files under <strong>100 MB</strong>. First conversion may take 1-2 minutes to load the engine.
+      </div>
+
+      <!-- Upload Zone -->
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="video/*,.mkv,.avi,.mov,.flv,.wmv,.3gp">
+        <div class="icon" id="uploadIcon">🎥</div>
+        <div class="title" id="uploadTitle">Drop your video here</div>
+        <div class="subtitle">or click to browse</div>
+        <div class="formats">MP4 · WEBM · MOV · MKV · AVI · FLV · WMV · 3GP</div>
+      </div>
+
+      <!-- File Card -->
+      <div class="file-card" id="fileCard" style="display:none;">
+        <div class="file-info-col">
+          <div class="file-name" id="fileName">video.mp4</div>
+          <div class="file-meta" id="fileMeta">0 MB</div>
+        </div>
+        <button class="file-remove" onclick="resetTool()" title="Remove">&times;</button>
+      </div>
+
+      <!-- Format Selector -->
+      <div class="format-selector" id="formatContainer" style="display:none;">
+        <label for="formatSelect">Convert To:</label>
+        <select id="formatSelect">
+          <option value="mp4">MP4 (Best compatibility)</option>
+          <option value="webm">WEBM (Small size)</option>
+          <option value="mov">MOV (QuickTime)</option>
+          <option value="mkv">MKV (Container)</option>
+          <option value="avi">AVI (Legacy)</option>
+          <option value="gif">GIF (Animated)</option>
+        </select>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-container" id="progressContainer">
+        <div class="progress-label">
+          <span id="progressStatus">Converting...</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <button class="btn" id="convertBtn" disabled style="display:none;">Convert Video</button>
+      <div class="result" id="result"></div>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2026 Quick Converter. All rights reserved.</p>
+    <p><a href="index.html">Home</a> | <a href="about.html">About</a> | <a href="privacy.html">Privacy</a></p>
+  </footer>
+
+  <!-- FFmpeg.wasm -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+  <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+
+  <script>
+    const toolContainer = document.getElementById('toolContainer');
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileCard = document.getElementById('fileCard');
+    const fileName = document.getElementById('fileName');
+    const fileMeta = document.getElementById('fileMeta');
+    const formatContainer = document.getElementById('formatContainer');
+    const formatSelect = document.getElementById('formatSelect');
+    const convertBtn = document.getElementById('convertBtn');
+    const result = document.getElementById('result');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressStatus = document.getElementById('progressStatus');
+
+    let selectedFile = null;
+    let ffmpeg = null;
+    let ffmpegLoaded = false;
+
+    // ===== Drag & Drop =====
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
+      toolContainer.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+    toolContainer.addEventListener('dragover', () => uploadZone.classList.add('dragover'));
+    toolContainer.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    toolContainer.addEventListener('drop', (e) => {
+      uploadZone.classList.remove('dragover');
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      handleFile(e.target.files[0]);
+      fileInput.value = '';
+    });
+
+    // ===== Handle File =====
+    function handleFile(file) {
+      if (!file) return;
+      if (!file.type.startsWith('video/') && !file.name.match(/\.(mkv|avi|mov|flv|wmv|3gp|mp4|webm)$/i)) {
+        alert('Please select a video file.');
+        return;
+      }
+
+      // Size limit warning
+      if (file.size > 200 * 1024 * 1024) {
+        alert('File too large! Max 200 MB. For bigger files, please use CloudConvert.');
+        return;
+      }
+
+      selectedFile = file;
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      fileName.textContent = file.name;
+      fileMeta.textContent = `${sizeMB} MB · ${file.name.split('.').pop().toUpperCase()}`;
+
+      uploadZone.style.display = 'none';
+      fileCard.style.display = 'flex';
+      formatContainer.style.display = 'block';
+      convertBtn.style.display = 'block';
+      convertBtn.disabled = false;
+      result.style.display = 'none';
+    }
+
+    // ===== Reset =====
+    function resetTool() {
+      selectedFile = null;
+      fileInput.value = '';
+      uploadZone.style.display = 'block';
+      fileCard.style.display = 'none';
+      formatContainer.style.display = 'none';
+      convertBtn.style.display = 'none';
+      convertBtn.disabled = true;
+      result.style.display = 'none';
+      progressContainer.classList.remove('active');
+      progressFill.style.width = '0%';
+      progressPercent.textContent = '0%';
+    }
+
+    // ===== Load FFmpeg =====
+    async function loadFFmpeg() {
+      if (ffmpegLoaded) return ffmpeg;
+
+      progressStatus.textContent = 'Loading FFmpeg engine (25 MB, one-time)...';
+      progressContainer.classList.add('active');
+      progressFill.style.width = '5%';
+      progressPercent.textContent = '5%';
+
+      const { FFmpeg } = FFmpegWASM;
+      const { toBlobURL } = FFmpegUtil;
+
+      ffmpeg = new FFmpeg();
+
+      ffmpeg.on('log', ({ message }) => {
+        console.log('[FFmpeg]', message);
+      });
+
+      ffmpeg.on('progress', ({ progress, time }) => {
+        const pct = Math.min(Math.round(progress * 100), 99);
+        progressFill.style.width = pct + '%';
+        progressPercent.textContent = pct + '%';
+        progressStatus.textContent = 'Converting...';
+      });
+
+      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      });
+
+      ffmpegLoaded = true;
+      return ffmpeg;
+    }
+
+    // ===== Convert =====
+    convertBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      const targetFormat = formatSelect.value;
+      convertBtn.disabled = true;
+      convertBtn.innerHTML = '<span class="spinner"></span> Converting...';
+      result.style.display = 'none';
+      progressContainer.classList.add('active');
+      progressFill.style.width = '0%';
+      progressPercent.textContent = '0%';
+
+      try {
+        await loadFFmpeg();
+
+        progressStatus.textContent = 'Reading file...';
+        const { fetchFile } = FFmpegUtil;
+
+        const inputName = 'input.' + (selectedFile.name.split('.').pop().toLowerCase() || 'mp4');
+        const outputName = 'output.' + (targetFormat === 'gif' ? 'gif' : targetFormat);
+
+        await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
+
+        progressStatus.textContent = 'Converting video...';
+        progressFill.style.width = '10%';
+
+        // Build command based on target
+        let args;
+        if (targetFormat === 'gif') {
+          args = ['-i', inputName, '-vf', 'fps=10,scale=480:-1:flags=lanczos', '-t', '10', outputName];
+        } else if (targetFormat === 'webm') {
+          args = ['-i', inputName, '-c:v', 'libvpx-vp9', '-crf', '30', '-b:v', '0', '-c:a', 'libopus', outputName];
+        } else if (targetFormat === 'mp4') {
+          args = ['-i', inputName, '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28', '-c:a', 'aac', outputName];
+        } else {
+          // For containers (mov, mkv, avi): copy codecs if possible
+          args = ['-i', inputName, '-c', 'copy', outputName];
+        }
+
+        await ffmpeg.exec(args);
+
+        progressStatus.textContent = 'Preparing download...';
+        progressFill.style.width = '95%';
+
+        const data = await ffmpeg.readFile(outputName);
+        const blob = new Blob([data.buffer], { type: 'video/' + targetFormat });
+        const url = URL.createObjectURL(blob);
+        const sizeMB = (blob.size / (1024 * 1024)).toFixed(1);
+
+        // Cleanup
+        try { await ffmpeg.deleteFile(inputName); } catch(e) {}
+        try { await ffmpeg.deleteFile(outputName); } catch(e) {}
+
+        progressFill.style.width = '100%';
+        progressPercent.textContent = '100%';
+        progressStatus.textContent = 'Done!';
+
+        setTimeout(() => progressContainer.classList.remove('active'), 800);
+
+        const ext = targetFormat.toUpperCase();
+        const newName = selectedFile.name.replace(/\.[^.]+$/, '') + '.' + (targetFormat === 'gif' ? 'gif' : targetFormat);
+
+        result.style.display = 'block';
+        result.className = 'result';
+        result.innerHTML = `
+          <p>✅ <strong>Converted to ${ext}!</strong> (${sizeMB} MB)</p>
+          ${targetFormat !== 'gif' ? `<video src="${url}" controls></video>` : `<img src="${url}" style="max-width:100%;border-radius:8px;margin-top:15px;">`}
+          <br>
+          <a href="${url}" download="${newName}" class="download-single">⬇ Download ${ext}</a>
+        `;
+
+        convertBtn.disabled = false;
+        convertBtn.textContent = 'Convert Video';
+
+      } catch (error) {
+        console.error(error);
+        progressContainer.classList.remove('active');
+        result.style.display = 'block';
+        result.className = 'result error';
+        result.innerHTML = `<p style="color:red;">❌ Error: ${error.message || 'Conversion failed. Try a smaller file or different format.'}</p>`;
+        convertBtn.disabled = false;
+        convertBtn.textContent = 'Convert Video';
+      }
+    });
+  </script>
+</body>
+</html>
