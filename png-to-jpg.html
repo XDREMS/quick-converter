@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Free Image Converter - Convert JPG, PNG, WebP Online</title>
-  <meta name="description" content="Convert images online for free. Auto-detect format, convert to JPG, PNG, WebP. No upload, works in your browser.">
+  <title>Universal Image Converter - JPG, PNG, WebP, HEIC, SVG</title>
+  <meta name="description" content="Convert any image (JPG, PNG, WebP, HEIC, SVG) to JPG, PNG, or WebP. Free and browser-based.">
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 </head>
 <body>
   <header>
@@ -14,32 +15,44 @@
   </header>
 
   <div class="tool-container">
-    <h1>🔄 Universal Image Converter</h1>
-    <p>Auto-detect format and convert to JPG, PNG, or WebP instantly. Files never leave your device.</p>
+    <h1>🖼️ Universal Image Converter</h1>
+    <p>Upload any image and convert it to your desired format instantly. Files never leave your device.</p>
 
-    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-      <input type="file" id="fileInput" accept="image/*">
-      <p><strong>Click to select image</strong></p>
-      <p style="color:#6B7280;font-size:0.85rem;margin-top:5px;">or drag and drop</p>
+    <!-- Upload Area -->
+    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" accept="image/*,.heic,.heif,.svg">
+      <p><strong>Click to select any image</strong></p>
+      <p style="color:#6B7280;font-size:0.85rem;margin-top:5px;">JPG, PNG, WebP, HEIC, SVG supported</p>
     </div>
 
-    <!-- Auto Detected Format Display -->
-    <div style="background: #F3F4F6; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none;" id="detectBox">
-      <p style="margin: 0; font-size: 0.95rem;">Detected Format: <strong id="detectedFormat" style="color: var(--primary);"></strong></p>
+    <!-- File Card (शुरू में छिपा रहेगा) -->
+    <div class="file-card" id="fileCard">
+      <div class="file-info">
+        <div class="file-icon" id="fileIcon">IMG</div>
+        <div class="file-details">
+          <p id="fileName">filename.jpg</p>
+          <span id="fileSize">0 KB</span>
+        </div>
+      </div>
+      <button class="clear-btn" onclick="resetTool()" title="Remove file">&times;</button>
     </div>
 
-    <!-- Target Format Dropdown -->
-    <div style="margin-bottom: 20px;">
-      <label for="formatSelect" style="font-weight: 600; display: block; margin-bottom: 8px;">Convert to:</label>
+    <!-- Format Selector -->
+    <div style="margin-bottom: 20px; display: none;" id="formatContainer">
+      <label for="formatSelect" style="font-weight: 600; display: block; margin-bottom: 8px;">Convert To:</label>
       <select id="formatSelect" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background: white; cursor: pointer;">
-        <option value="image/jpeg">JPG (JPEG)</option>
-        <option value="image/png">PNG</option>
-        <option value="image/webp">WebP</option>
+        <optgroup label="Image">
+          <option value="image/jpeg">JPG (JPEG)</option>
+          <option value="image/png">PNG</option>
+          <option value="image/webp">WebP</option>
+        </optgroup>
+        <optgroup label="Vector">
+          <option value="image/svg+xml" disabled>SVG (Input only, cannot output)</option>
+        </optgroup>
       </select>
     </div>
 
-    <button class="btn" id="convertBtn" disabled>Convert Image</button>
-
+    <button class="btn" id="convertBtn" disabled style="display: none;">Convert Image</button>
     <div class="result" id="result"></div>
   </div>
 
@@ -50,85 +63,124 @@
 
   <script>
     const fileInput = document.getElementById('fileInput');
-    const convertBtn = document.getElementById('convertBtn');
+    const uploadArea = document.getElementById('uploadArea');
+    const fileCard = document.getElementById('fileCard');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const fileIcon = document.getElementById('fileIcon');
+    const formatContainer = document.getElementById('formatContainer');
     const formatSelect = document.getElementById('formatSelect');
-    const detectBox = document.getElementById('detectBox');
-    const detectedFormat = document.getElementById('detectedFormat');
+    const convertBtn = document.getElementById('convertBtn');
     const result = document.getElementById('result');
     let selectedFile = null;
 
-    // Jab user file upload kare
+    // File Select Handler
     fileInput.addEventListener('change', (e) => {
       selectedFile = e.target.files[0];
-      if (selectedFile) {
-        // Format auto-detect karo
-        const type = selectedFile.type.split('/')[1].toUpperCase();
-        detectedFormat.textContent = type;
-        detectBox.style.display = 'block';
-        
-        // Default dropdown ko current format par set karo (agar available ho)
-        const currentMime = selectedFile.type;
-        if (['image/jpeg', 'image/png', 'image/webp'].includes(currentMime)) {
-          formatSelect.value = currentMime;
-        }
+      if (!selectedFile) return;
 
-        convertBtn.disabled = false;
-        result.style.display = 'none';
-      }
+      // 1. File Card Update
+      const ext = selectedFile.name.split('.').pop().toUpperCase();
+      fileIcon.textContent = ext.substring(0, 3); // Max 3 chars
+      fileName.textContent = selectedFile.name;
+      fileSize.textContent = `${(selectedFile.size / 1024).toFixed(1)} KB • ${ext}`;
+      
+      // 2. Show UI Elements
+      uploadArea.style.display = 'none';
+      fileCard.style.display = 'flex';
+      formatContainer.style.display = 'block';
+      convertBtn.style.display = 'block';
+      convertBtn.disabled = false;
+      result.style.display = 'none';
     });
 
-    // Jab user Convert button dabaye
-    convertBtn.addEventListener('click', () => {
+    // Reset Tool
+    function resetTool() {
+      selectedFile = null;
+      fileInput.value = '';
+      uploadArea.style.display = 'block';
+      fileCard.style.display = 'none';
+      formatContainer.style.display = 'none';
+      convertBtn.style.display = 'none';
+      convertBtn.disabled = true;
+      result.style.display = 'none';
+      result.innerHTML = '';
+    }
+
+    // Convert Button Handler
+    convertBtn.addEventListener('click', async () => {
       if (!selectedFile) return;
       
-      const targetFormat = formatSelect.value; // e.g., 'image/jpeg'
-      const extension = targetFormat === 'image/jpeg' ? 'jpg' : targetFormat.split('/')[1];
+      const targetFormat = formatSelect.value; 
+      let extension = targetFormat === 'image/jpeg' ? 'jpg' : targetFormat.split('/')[1];
       
       convertBtn.disabled = true;
       convertBtn.textContent = 'Converting...';
+      result.style.display = 'none';
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
+      try {
+        let imageSource = selectedFile;
 
-          // Agar JPG mein convert kar rahe hain, toh transparent background ko white karo
-          if (targetFormat === 'image/jpeg') {
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-          }
-          
-          ctx.drawImage(img, 0, 0);
-
-          canvas.toBlob((blob) => {
-            const url = URL.createObjectURL(blob);
-            const newSize = (blob.size / 1024).toFixed(1);
-            
-            // File ka naya naam banao
-            const originalName = selectedFile.name;
-            const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
-            const newFileName = `${nameWithoutExt}.${extension}`;
-
+        // HEIC Conversion
+        if (selectedFile.name.toLowerCase().endsWith('.heic') || selectedFile.name.toLowerCase().endsWith('.heif') || selectedFile.type === 'image/heic') {
             result.style.display = 'block';
-            result.innerHTML = `
-              <p>✅ <strong>Converted to ${extension.toUpperCase()}!</strong></p>
-              <p>New Size: ${newSize} KB</p>
-              <img src="${url}" alt="Preview">
-              <br>
-              <a href="${url}" download="${newFileName}" class="btn" style="margin-top:15px;">Download ${extension.toUpperCase()}</a>
-            `;
+            result.innerHTML = `<p>Processing HEIC image, please wait...</p>`;
+            const convertedBlob = await heic2any({ blob: selectedFile, toType: 'image/png' });
+            imageSource = convertedBlob;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width || img.naturalWidth;
+            canvas.height = img.height || img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+
+            // JPG ke liye white background
+            if (targetFormat === 'image/jpeg') {
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
             
-            convertBtn.disabled = false;
-            convertBtn.textContent = 'Convert Image';
-          }, targetFormat, 0.9); // 0.9 quality for JPG/WebP
+            ctx.drawImage(img, 0, 0);
+
+            canvas.toBlob((blob) => {
+              const url = URL.createObjectURL(blob);
+              const newSize = (blob.size / 1024).toFixed(1);
+              
+              const nameWithoutExt = selectedFile.name.substring(0, selectedFile.name.lastIndexOf('.')) || selectedFile.name;
+              const newFileName = `${nameWithoutExt}.${extension}`;
+
+              result.style.display = 'block';
+              result.innerHTML = `
+                <p>✅ <strong>Converted to ${extension.toUpperCase()}!</strong></p>
+                <p>New Size: ${newSize} KB</p>
+                <img src="${url}" alt="Preview">
+                <br>
+                <a href="${url}" download="${newFileName}" class="btn" style="margin-top:15px; display:inline-block; width:auto;">Download ${extension.toUpperCase()}</a>
+              `;
+              convertBtn.disabled = false;
+              convertBtn.textContent = 'Convert Image';
+            }, targetFormat, 0.9);
+          };
+          img.onerror = () => {
+             result.style.display = 'block';
+             result.innerHTML = `<p style="color:red;">Error: यह इमेज फॉर्मेट ब्राउज़र रीड नहीं कर पा रहा।</p>`;
+             convertBtn.disabled = false;
+             convertBtn.textContent = 'Convert Image';
+          };
+          img.src = e.target.result;
         };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(selectedFile);
+        reader.readAsDataURL(imageSource);
+
+      } catch (error) {
+        result.style.display = 'block';
+        result.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+        convertBtn.disabled = false;
+        convertBtn.textContent = 'Convert Image';
+      }
     });
   </script>
 </body>
