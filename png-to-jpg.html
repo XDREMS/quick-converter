@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Universal Image Converter - All Formats</title>
-  <meta name="description" content="Convert images to JPG, PNG, WebP, BMP, ICO, AVIF, PDF for free. Drag & drop, no upload.">
+  <title>Universal Image Converter - JPG, PNG, WebP, BMP, ICO, AVIF, PDF</title>
+  <meta name="description" content="Convert multiple images to JPG, PNG, WebP, BMP, ICO, AVIF, or PDF for free. Drag & drop, no upload, works in your browser.">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -22,14 +22,16 @@
       <h1>🖼️ Universal Image Converter</h1>
       <p>Drag & drop multiple images and choose the format for each one individually.</p>
 
+      <!-- Upload Zone -->
       <div class="upload-zone" id="uploadZone">
         <input type="file" id="fileInput" accept="image/*,.heic,.heif,.svg" multiple>
         <div class="icon" id="uploadIcon">📁</div>
         <div class="title" id="uploadTitle">Drop your images here</div>
         <div class="subtitle">or click to browse</div>
-        <div class="formats">JPG · PNG · WebP · BMP · ICO · AVIF · HEIC · SVG</div>
+        <div class="formats">JPG · PNG · WebP · BMP · ICO · AVIF · PDF</div>
       </div>
 
+      <!-- File List -->
       <div id="fileListContainer" style="display: none;">
         <div class="file-list-header">
           <h3>Selected Files (<span id="fileCount">0</span>)</h3>
@@ -41,8 +43,14 @@
         <ul class="file-list" id="fileList"></ul>
       </div>
 
+      <!-- Convert Button -->
       <button class="btn" id="convertBtn" disabled style="display: none; margin-top: 24px;">Convert Images</button>
+
+      <!-- Success Message -->
       <div class="result" id="result"></div>
+
+      <!-- Converted Files List -->
+      <div class="result-files" id="resultFiles" style="display:none;"></div>
     </div>
   </main>
 
@@ -60,23 +68,24 @@
     const fileCount = document.getElementById('fileCount');
     const convertBtn = document.getElementById('convertBtn');
     const result = document.getElementById('result');
+    const resultFiles = document.getElementById('resultFiles');
     const uploadIcon = document.getElementById('uploadIcon');
     const uploadTitle = document.getElementById('uploadTitle');
-    
-    let selectedFiles = [];
 
-    // सारे फॉर्मेट की लिस्ट (जो सपोर्टेड हैं + जो नहीं हैं)
-        // सिर्फ काम करने वाले 7 फॉर्मेट
+    let selectedFiles = []; // { file, targetFormat }
+
+    // सिर्फ काम करने वाले 7 फॉर्मेट
     const FORMATS = [
-      { value: 'image/jpeg', label: 'JPG', supported: true },
-      { value: 'image/png', label: 'PNG', supported: true },
-      { value: 'image/webp', label: 'WEBP', supported: true },
-      { value: 'image/bmp', label: 'BMP', supported: true },
-      { value: 'image/x-icon', label: 'ICO', supported: true },
-      { value: 'image/avif', label: 'AVIF', supported: true },
-      { value: 'application/pdf', label: 'PDF', supported: true }
+      { value: 'image/jpeg', label: 'JPG' },
+      { value: 'image/png', label: 'PNG' },
+      { value: 'image/webp', label: 'WEBP' },
+      { value: 'image/bmp', label: 'BMP' },
+      { value: 'image/x-icon', label: 'ICO' },
+      { value: 'image/avif', label: 'AVIF' },
+      { value: 'application/pdf', label: 'PDF' }
     ];
 
+    // ===== Drag & Drop =====
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
       toolContainer.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
     });
@@ -93,8 +102,9 @@
       fileInput.value = '';
     });
 
+    // ===== Handle Files =====
     function handleFiles(files) {
-      const newFiles = Array.from(files).filter(f => 
+      const newFiles = Array.from(files).filter(f =>
         f.type.startsWith('image/') || f.name.match(/\.(heic|heif|svg|avif|bmp|gif)$/i)
       ).map(file => ({ file: file, targetFormat: 'image/jpeg' }));
 
@@ -107,21 +117,19 @@
       selectedFiles[index].targetFormat = format;
     }
 
+    // ===== Update UI =====
     function updateUI() {
       fileList.innerHTML = '';
       fileCount.textContent = selectedFiles.length;
-      
+
       selectedFiles.forEach((item, index) => {
         const file = item.file;
         const ext = file.name.split('.').pop().toUpperCase();
-        
-        // सारे फॉर्मेट का ऑप्शन
+
         let optionsHTML = '';
         FORMATS.forEach(fmt => {
           const selected = item.targetFormat === fmt.value ? 'selected' : '';
-          const disabled = fmt.supported ? '' : 'disabled';
-          const label = fmt.supported ? fmt.label : `${fmt.label} (soon)`;
-          optionsHTML += `<option value="${fmt.value}" ${selected} ${disabled}>${label}</option>`;
+          optionsHTML += `<option value="${fmt.value}" ${selected}>${fmt.label}</option>`;
         });
 
         const li = document.createElement('li');
@@ -159,10 +167,20 @@
         convertBtn.style.display = 'none';
       }
       result.style.display = 'none';
+      resultFiles.style.display = 'none';
+      resultFiles.innerHTML = '';
     }
 
-    function removeFile(index) { selectedFiles.splice(index, 1); updateUI(); }
-    function resetTool() { selectedFiles = []; fileInput.value = ''; updateUI(); }
+    function removeFile(index) {
+      selectedFiles.splice(index, 1);
+      updateUI();
+    }
+
+    function resetTool() {
+      selectedFiles = [];
+      fileInput.value = '';
+      updateUI();
+    }
 
     // ===== BMP Encoder =====
     function canvasToBMP(canvas) {
@@ -174,7 +192,7 @@
       const fileSize = 54 + pixelArraySize;
       const buffer = new ArrayBuffer(fileSize);
       const view = new DataView(buffer);
-      
+
       view.setUint8(0, 0x42); view.setUint8(1, 0x4D);
       view.setUint32(2, fileSize, true);
       view.setUint32(10, 54, true);
@@ -184,7 +202,7 @@
       view.setUint16(26, 1, true);
       view.setUint16(28, 24, true);
       view.setUint32(34, pixelArraySize, true);
-      
+
       let offset = 54;
       for (let y = height - 1; y >= 0; y--) {
         for (let x = 0; x < width; x++) {
@@ -205,7 +223,7 @@
       const headerSize = 22;
       const buffer = new ArrayBuffer(headerSize + pngBuffer.byteLength);
       const view = new DataView(buffer);
-      
+
       view.setUint16(0, 0, true);
       view.setUint16(2, 1, true);
       view.setUint16(4, 1, true);
@@ -216,7 +234,7 @@
       view.setUint16(12, 32, true);
       view.setUint32(14, pngBuffer.byteLength, true);
       view.setUint32(18, headerSize, true);
-      
+
       new Uint8Array(buffer, headerSize).set(new Uint8Array(pngBuffer));
       return new Blob([buffer], { type: 'image/x-icon' });
     }
@@ -227,13 +245,15 @@
       convertBtn.disabled = true;
       convertBtn.textContent = `Converting 0/${selectedFiles.length}...`;
       result.style.display = 'none';
+      resultFiles.style.display = 'none';
+      resultFiles.innerHTML = '';
 
       try {
-        let zip = new JSZip();
+        const convertedResults = []; // { name, blob, format }
 
         for (let i = 0; i < selectedFiles.length; i++) {
           let { file, targetFormat } = selectedFiles[i];
-          let extension = targetFormat === 'image/jpeg' ? 'jpg' : 
+          let extension = targetFormat === 'image/jpeg' ? 'jpg' :
                           targetFormat === 'image/x-icon' ? 'ico' :
                           targetFormat === 'image/bmp' ? 'bmp' :
                           targetFormat === 'application/pdf' ? 'pdf' :
@@ -242,6 +262,7 @@
           convertBtn.textContent = `Converting ${i+1}/${selectedFiles.length}...`;
           let imageSource = file;
 
+          // HEIC handling
           if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic') {
             const convertedBlob = await heic2any({ blob: file, toType: 'image/png' });
             imageSource = convertedBlob;
@@ -256,7 +277,7 @@
                 canvas.width = img.width || img.naturalWidth;
                 canvas.height = img.height || img.naturalHeight;
                 const ctx = canvas.getContext('2d');
-                
+
                 if (targetFormat === 'image/jpeg') {
                   ctx.fillStyle = '#FFFFFF';
                   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -264,6 +285,7 @@
                 ctx.drawImage(img, 0, 0);
 
                 const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                const finalName = `${nameWithoutExt}.${extension}`;
 
                 try {
                   if (targetFormat === 'application/pdf') {
@@ -273,33 +295,32 @@
                     const pdfWidth = pdfDoc.internal.pageSize.getWidth();
                     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
                     pdfDoc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-                    zip.file(`${nameWithoutExt}.pdf`, pdfDoc.output('blob'));
+                    const blob = pdfDoc.output('blob');
+                    convertedResults.push({ name: finalName, blob, format: 'PDF' });
                     resolve();
                   } else if (targetFormat === 'image/bmp') {
                     const bmpBlob = canvasToBMP(canvas);
-                    zip.file(`${nameWithoutExt}.bmp`, bmpBlob);
+                    convertedResults.push({ name: finalName, blob: bmpBlob, format: 'BMP' });
                     resolve();
                   } else if (targetFormat === 'image/x-icon') {
                     const icoBlob = await canvasToICO(canvas);
-                    zip.file(`${nameWithoutExt}.ico`, icoBlob);
+                    convertedResults.push({ name: finalName, blob: icoBlob, format: 'ICO' });
                     resolve();
                   } else if (targetFormat === 'image/avif') {
-                    // AVIF try करो, नहीं हुआ तो PNG में fallback
                     canvas.toBlob((blob) => {
                       if (!blob || blob.size < 100) {
-                        // Fallback to PNG
                         canvas.toBlob((pngBlob) => {
-                          zip.file(`${nameWithoutExt}_avif_fallback.png`, pngBlob);
+                          convertedResults.push({ name: `${nameWithoutExt}.png`, blob: pngBlob, format: 'PNG (AVIF fallback)' });
                           resolve();
                         }, 'image/png');
                       } else {
-                        zip.file(`${nameWithoutExt}.avif`, blob);
+                        convertedResults.push({ name: finalName, blob, format: 'AVIF' });
                         resolve();
                       }
                     }, 'image/avif', 0.9);
                   } else {
                     canvas.toBlob((blob) => {
-                      zip.file(`${nameWithoutExt}.${extension}`, blob);
+                      convertedResults.push({ name: finalName, blob, format: extension.toUpperCase() });
                       resolve();
                     }, targetFormat, 0.9);
                   }
@@ -313,13 +334,63 @@
           });
         }
 
-        convertBtn.textContent = 'Packaging ZIP...';
-        const content = await zip.generateAsync({ type: 'blob' });
-        saveAs(content, `converted_images.zip`);
+        // ===== Prepare Results UI =====
+        convertBtn.textContent = 'Preparing downloads...';
 
+        const zip = new JSZip();
+        let resultsHTML = `
+          <h3>
+            <span>✅ Converted Files (${convertedResults.length})</span>
+            <span class="success-badge">Ready to download</span>
+          </h3>
+        `;
+
+        convertedResults.forEach((item) => {
+          const url = URL.createObjectURL(item.blob);
+          const sizeKB = (item.blob.size / 1024).toFixed(1);
+          zip.file(item.name, item.blob);
+
+          resultsHTML += `
+            <div class="result-item">
+              <div class="result-item-info">
+                <div class="result-item-name">${item.name}</div>
+                <div class="result-item-meta">
+                  <span class="format-tag">${item.format}</span>
+                  ${sizeKB} KB
+                </div>
+              </div>
+              <a href="${url}" download="${item.name}" class="download-single">
+                ⬇ Download
+              </a>
+            </div>
+          `;
+        });
+
+        resultsHTML += `
+          <button class="download-all-btn" id="downloadAllBtn">
+            📦 Download All (ZIP)
+          </button>
+        `;
+
+        resultFiles.innerHTML = resultsHTML;
+        resultFiles.style.display = 'block';
+
+        // Download All handler
+        document.getElementById('downloadAllBtn').addEventListener('click', async () => {
+          const btn = document.getElementById('downloadAllBtn');
+          btn.textContent = '📦 Zipping...';
+          btn.disabled = true;
+          const content = await zip.generateAsync({ type: 'blob' });
+          saveAs(content, `converted_images_${Date.now()}.zip`);
+          btn.textContent = '📦 Download All (ZIP)';
+          btn.disabled = false;
+        });
+
+        // Success message
         result.style.display = 'block';
         result.className = 'result';
-        result.innerHTML = `<p>✅ <strong>Successfully converted ${selectedFiles.length} images!</strong></p>`;
+        result.innerHTML = `<p>✅ <strong>Successfully converted ${convertedResults.length} images!</strong></p>`;
+
         convertBtn.disabled = false;
         convertBtn.textContent = 'Convert Images';
 
