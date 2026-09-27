@@ -3,10 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Universal Image Converter - JPG, PNG, WebP, HEIC, SVG</title>
-  <meta name="description" content="Convert any image (JPG, PNG, WebP, HEIC, SVG) to JPG, PNG, or WebP. Free and browser-based.">
+  <title>Universal Image Converter - Bulk JPG, PNG, WebP, PDF</title>
+  <meta name="description" content="Convert multiple images to JPG, PNG, WebP, or PDF for free. No upload, works in your browser.">
   <link rel="stylesheet" href="style.css">
+  <!-- लाइब्रेरीज़ -->
   <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
   <header>
@@ -16,43 +20,38 @@
 
   <div class="tool-container">
     <h1>🖼️ Universal Image Converter</h1>
-    <p>Upload any image and convert it to your desired format instantly. Files never leave your device.</p>
+    <p>Upload multiple images and convert them to JPG, PNG, WebP, or PDF instantly.</p>
 
     <!-- Upload Area -->
     <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-      <input type="file" id="fileInput" accept="image/*,.heic,.heif,.svg">
-      <p><strong>Click to select any image</strong></p>
-      <p style="color:#6B7280;font-size:0.85rem;margin-top:5px;">JPG, PNG, WebP, HEIC, SVG supported</p>
+      <input type="file" id="fileInput" accept="image/*,.heic,.heif,.svg" multiple>
+      <p><strong>Click to select multiple images</strong></p>
+      <p style="color:#6B7280;font-size:0.85rem;margin-top:5px;">JPG, PNG, WebP, HEIC, AVIF, BMP, GIF, SVG supported</p>
     </div>
 
-    <!-- File Card (शुरू में छिपा रहेगा) -->
-    <div class="file-card" id="fileCard">
-      <div class="file-info">
-        <div class="file-icon" id="fileIcon">IMG</div>
-        <div class="file-details">
-          <p id="fileName">filename.jpg</p>
-          <span id="fileSize">0 KB</span>
-        </div>
-      </div>
-      <button class="clear-btn" onclick="resetTool()" title="Remove file">&times;</button>
+    <!-- File List -->
+    <div id="fileListContainer" style="display: none; margin-bottom: 20px;">
+      <h3 style="margin-bottom: 10px; font-size: 1rem;">Selected Files (<span id="fileCount">0</span>)</h3>
+      <ul id="fileList" style="list-style: none; padding: 0; max-height: 150px; overflow-y: auto; background: #F9FAFB; border-radius: 8px; border: 1px solid var(--border-color);"></ul>
+      <button class="clear-btn" onclick="resetTool()" style="color: #EF4444; font-size: 0.9rem; margin-top: 10px;">&times; Clear All</button>
     </div>
 
     <!-- Format Selector -->
     <div style="margin-bottom: 20px; display: none;" id="formatContainer">
       <label for="formatSelect" style="font-weight: 600; display: block; margin-bottom: 8px;">Convert To:</label>
       <select id="formatSelect" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background: white; cursor: pointer;">
-        <optgroup label="Image">
+        <optgroup label="Image Formats">
           <option value="image/jpeg">JPG (JPEG)</option>
           <option value="image/png">PNG</option>
           <option value="image/webp">WebP</option>
         </optgroup>
-        <optgroup label="Vector">
-          <option value="image/svg+xml" disabled>SVG (Input only, cannot output)</option>
+        <optgroup label="Document Format">
+          <option value="application/pdf">PDF (All images in one file)</option>
         </optgroup>
       </select>
     </div>
 
-    <button class="btn" id="convertBtn" disabled style="display: none;">Convert Image</button>
+    <button class="btn" id="convertBtn" disabled style="display: none;">Convert Images</button>
     <div class="result" id="result"></div>
   </div>
 
@@ -64,122 +63,149 @@
   <script>
     const fileInput = document.getElementById('fileInput');
     const uploadArea = document.getElementById('uploadArea');
-    const fileCard = document.getElementById('fileCard');
-    const fileName = document.getElementById('fileName');
-    const fileSize = document.getElementById('fileSize');
-    const fileIcon = document.getElementById('fileIcon');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const fileList = document.getElementById('fileList');
+    const fileCount = document.getElementById('fileCount');
     const formatContainer = document.getElementById('formatContainer');
     const formatSelect = document.getElementById('formatSelect');
     const convertBtn = document.getElementById('convertBtn');
     const result = document.getElementById('result');
-    let selectedFile = null;
+    
+    let selectedFiles = [];
 
-    // File Select Handler
+    // 1. File Select Handler (Multiple Files)
     fileInput.addEventListener('change', (e) => {
-      selectedFile = e.target.files[0];
-      if (!selectedFile) return;
+      selectedFiles = Array.from(e.target.files);
+      if (selectedFiles.length === 0) return;
 
-      // 1. File Card Update
-      const ext = selectedFile.name.split('.').pop().toUpperCase();
-      fileIcon.textContent = ext.substring(0, 3); // Max 3 chars
-      fileName.textContent = selectedFile.name;
-      fileSize.textContent = `${(selectedFile.size / 1024).toFixed(1)} KB • ${ext}`;
-      
-      // 2. Show UI Elements
-      uploadArea.style.display = 'none';
-      fileCard.style.display = 'flex';
-      formatContainer.style.display = 'block';
-      convertBtn.style.display = 'block';
-      convertBtn.disabled = false;
-      result.style.display = 'none';
+      updateFileListUI();
     });
 
-    // Reset Tool
-    function resetTool() {
-      selectedFile = null;
-      fileInput.value = '';
-      uploadArea.style.display = 'block';
-      fileCard.style.display = 'none';
-      formatContainer.style.display = 'none';
-      convertBtn.style.display = 'none';
-      convertBtn.disabled = true;
+    // 2. Update UI
+    function updateFileListUI() {
+      fileList.innerHTML = '';
+      fileCount.textContent = selectedFiles.length;
+
+      selectedFiles.forEach(file => {
+        const ext = file.name.split('.').pop().toUpperCase();
+        const li = document.createElement('li');
+        li.style.cssText = 'padding: 10px 15px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; font-size: 0.9rem;';
+        li.innerHTML = `<span><strong>${file.name}</strong></span> <span style="color:#6B7280;">${(file.size/1024).toFixed(1)} KB • ${ext}</span>`;
+        fileList.appendChild(li);
+      });
+
+      uploadArea.style.display = selectedFiles.length > 0 ? 'none' : 'block';
+      fileListContainer.style.display = selectedFiles.length > 0 ? 'block' : 'none';
+      formatContainer.style.display = selectedFiles.length > 0 ? 'block' : 'none';
+      convertBtn.style.display = selectedFiles.length > 0 ? 'block' : 'none';
+      convertBtn.disabled = false;
       result.style.display = 'none';
-      result.innerHTML = '';
     }
 
-    // Convert Button Handler
+    // 3. Reset Tool
+    function resetTool() {
+      selectedFiles = [];
+      fileInput.value = '';
+      fileList.innerHTML = '';
+      updateFileListUI();
+    }
+
+    // 4. Convert Button Handler
     convertBtn.addEventListener('click', async () => {
-      if (!selectedFile) return;
+      if (selectedFiles.length === 0) return;
       
       const targetFormat = formatSelect.value; 
       let extension = targetFormat === 'image/jpeg' ? 'jpg' : targetFormat.split('/')[1];
       
       convertBtn.disabled = true;
-      convertBtn.textContent = 'Converting...';
+      convertBtn.textContent = `Converting 0/${selectedFiles.length}...`;
       result.style.display = 'none';
 
       try {
-        let imageSource = selectedFile;
+        // PDF के लिए jsPDF
+        const { jsPDF } = window.jspdf;
+        let pdfDoc = targetFormat === 'application/pdf' ? new jsPDF() : null;
+        
+        // ZIP के लिए JSZip
+        let zip = (targetFormat !== 'application/pdf') ? new JSZip() : null;
 
-        // HEIC Conversion
-        if (selectedFile.name.toLowerCase().endsWith('.heic') || selectedFile.name.toLowerCase().endsWith('.heif') || selectedFile.type === 'image/heic') {
-            result.style.display = 'block';
-            result.innerHTML = `<p>Processing HEIC image, please wait...</p>`;
-            const convertedBlob = await heic2any({ blob: selectedFile, toType: 'image/png' });
-            imageSource = convertedBlob;
+        for (let i = 0; i < selectedFiles.length; i++) {
+          let file = selectedFiles[i];
+          convertBtn.textContent = `Converting ${i+1}/${selectedFiles.length}...`;
+
+          let imageSource = file;
+
+          // HEIC Conversion
+          if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic') {
+              const convertedBlob = await heic2any({ blob: file, toType: 'image/png' });
+              imageSource = convertedBlob;
+          }
+
+          // Image Processing Promise
+          await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width || img.naturalWidth;
+                canvas.height = img.height || img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+
+                if (targetFormat === 'image/jpeg') {
+                  ctx.fillStyle = '#FFFFFF';
+                  ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+                
+                ctx.drawImage(img, 0, 0);
+
+                // PDF में जोड़ो
+                if (targetFormat === 'application/pdf') {
+                  const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                  const pdfWidth = pdfDoc.internal.pageSize.getWidth();
+                  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                  
+                  if (i > 0) pdfDoc.addPage();
+                  pdfDoc.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                  resolve();
+                } else {
+                  // इमेज कन्वर्जन (ZIP के लिए)
+                  canvas.toBlob((blob) => {
+                    const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                    const newFileName = `${nameWithoutExt}.${extension}`;
+                    zip.file(newFileName, blob);
+                    resolve();
+                  }, targetFormat, 0.9);
+                }
+              };
+              img.onerror = () => reject(new Error(`Failed to load ${file.name}`));
+              img.src = e.target.result;
+            };
+            reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+            reader.readAsDataURL(imageSource);
+          });
         }
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width || img.naturalWidth;
-            canvas.height = img.height || img.naturalHeight;
-            const ctx = canvas.getContext('2d');
+        // Final Download
+        convertBtn.textContent = 'Packaging files...';
+        
+        if (targetFormat === 'application/pdf') {
+          pdfDoc.save('converted_images.pdf');
+        } else {
+          const content = await zip.generateAsync({ type: 'blob' });
+          saveAs(content, `converted_images_${extension}.zip`);
+        }
 
-            // JPG ke liye white background
-            if (targetFormat === 'image/jpeg') {
-              ctx.fillStyle = '#FFFFFF';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
-            
-            ctx.drawImage(img, 0, 0);
-
-            canvas.toBlob((blob) => {
-              const url = URL.createObjectURL(blob);
-              const newSize = (blob.size / 1024).toFixed(1);
-              
-              const nameWithoutExt = selectedFile.name.substring(0, selectedFile.name.lastIndexOf('.')) || selectedFile.name;
-              const newFileName = `${nameWithoutExt}.${extension}`;
-
-              result.style.display = 'block';
-              result.innerHTML = `
-                <p>✅ <strong>Converted to ${extension.toUpperCase()}!</strong></p>
-                <p>New Size: ${newSize} KB</p>
-                <img src="${url}" alt="Preview">
-                <br>
-                <a href="${url}" download="${newFileName}" class="btn" style="margin-top:15px; display:inline-block; width:auto;">Download ${extension.toUpperCase()}</a>
-              `;
-              convertBtn.disabled = false;
-              convertBtn.textContent = 'Convert Image';
-            }, targetFormat, 0.9);
-          };
-          img.onerror = () => {
-             result.style.display = 'block';
-             result.innerHTML = `<p style="color:red;">Error: यह इमेज फॉर्मेट ब्राउज़र रीड नहीं कर पा रहा।</p>`;
-             convertBtn.disabled = false;
-             convertBtn.textContent = 'Convert Image';
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(imageSource);
+        result.style.display = 'block';
+        result.innerHTML = `<p>✅ <strong>Successfully converted ${selectedFiles.length} images!</strong></p>`;
+        convertBtn.disabled = false;
+        convertBtn.textContent = 'Convert Images';
 
       } catch (error) {
         result.style.display = 'block';
         result.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
         convertBtn.disabled = false;
-        convertBtn.textContent = 'Convert Image';
+        convertBtn.textContent = 'Convert Images';
       }
     });
   </script>
