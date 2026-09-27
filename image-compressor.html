@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free Image Compressor - Compress JPG, PNG Online</title>
+  <meta name="description" content="Compress images online for free. No upload, no signup. Works in your browser.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1><a href="index.html" style="color:white;text-decoration:none;">⚡ Quick Converter</a></h1>
+  </header>
+
+  <div class="tool-container">
+    <h1>🗜️ Image Compressor</h1>
+    <p>Compress JPG, PNG, WebP images. Files never leave your device.</p>
+
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" accept="image/*">
+      <p><strong>Click to select image</strong></p>
+      <p style="color:#999;font-size:0.9rem;">or drag and drop</p>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label>Quality: <span id="qualityValue">70</span>%</label>
+      <input type="range" id="quality" min="10" max="100" value="70" style="width:100%;">
+    </div>
+
+    <button class="btn" id="compressBtn" disabled>Compress Image</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <footer>
+    <p>© 2026 Quick Converter</p>
+  </footer>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const compressBtn = document.getElementById('compressBtn');
+    const qualitySlider = document.getElementById('quality');
+    const qualityValue = document.getElementById('qualityValue');
+    const result = document.getElementById('result');
+    let selectedFile = null;
+
+    qualitySlider.addEventListener('input', (e) => {
+      qualityValue.textContent = e.target.value;
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      selectedFile = e.target.files[0];
+      if (selectedFile) {
+        compressBtn.disabled = false;
+        result.innerHTML = `<p>Selected: <strong>${selectedFile.name}</strong> (${(selectedFile.size/1024).toFixed(1)} KB)</p>`;
+      }
+    });
+
+    compressBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      compressBtn.disabled = true;
+      compressBtn.textContent = 'Compressing...';
+
+      try {
+        const quality = parseInt(qualitySlider.value) / 100;
+        const compressedBlob = await compressImage(selectedFile, quality);
+        const originalSize = (selectedFile.size / 1024).toFixed(1);
+        const newSize = (compressedBlob.size / 1024).toFixed(1);
+        const saving = ((1 - compressedBlob.size / selectedFile.size) * 100).toFixed(1);
+
+        const url = URL.createObjectURL(compressedBlob);
+        result.innerHTML = `
+          <p>✅ <strong>Compressed!</strong></p>
+          <p>Original: ${originalSize} KB → New: ${newSize} KB</p>
+          <p>Saved: <strong>${saving}%</strong></p>
+          <img src="${url}" alt="Preview">
+          <br>
+          <a href="${url}" download="compressed_${selectedFile.name}" class="btn">Download</a>
+        `;
+      } catch (err) {
+        result.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+      }
+
+      compressBtn.disabled = false;
+      compressBtn.textContent = 'Compress Image';
+    });
+
+    function compressImage(file, quality) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob(
+              (blob) => blob ? resolve(blob) : reject(new Error('Compression failed')),
+              'image/jpeg',
+              quality
+            );
+          };
+          img.onerror = () => reject(new Error('Invalid image'));
+          img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('File read failed'));
+        reader.readAsDataURL(file);
+      });
+    }
+  </script>
+</body>
+</html>
